@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Worktree Manager"
+  short_description: "Manage bare-repo Git worktrees for parallel agent workflows"
+  default_prompt: "Use $git-worktree-manager to set up, branch, merge, and clean up Git worktrees for parallel agent tasks."
