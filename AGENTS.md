@@ -24,8 +24,16 @@ Use this sequence:
 
 Prefer the helper scripts in `scripts/powershell/` or `scripts/bash/` over ad hoc `git worktree` commands when the environment matches those shells.
 
+When running ordinary Git commands such as `status`, `diff`, `merge`, `branch`, or `push`, prefer explicit targeting:
+
+- `git -C <worktree-path> ...`
+- `git --git-dir <project>/.bare --work-tree <worktree-path> ...`
+
+Do not rely on a tool-level working directory alone in shell environments where it may not actually be applied.
+
 ## Safety
 
 - Refuse to remove dirty worktrees unless the user explicitly approves destructive cleanup.
 - Verify the current repo layout before assuming `.bare/` exists.
 - State clearly which branch is the integration branch and which branches are agent branches.
+- Treat workdir failures as an execution quirk, not as evidence that the worktree layout is wrong.

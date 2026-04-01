@@ -2,6 +2,8 @@
 
 Bare-repo Git worktree patterns for parallel agent workflows.
 
+Important execution nuance: in some agent shell environments, a tool-level working directory is not reliably applied to child Git commands. That is not a problem with the worktree layout itself. Agents should prefer explicit command targeting such as `git -C <worktree-path> ...`, or `git --git-dir <project>/.bare --work-tree <worktree-path> ...` when operating from outside the repo.
+
 This repository exists for one reason: make Git worktrees practical for multi-agent coding. The central recommendation is simple:
 
 1. Use one bare repository as the shared Git database.
@@ -101,16 +103,28 @@ The command surface is the same: `gnew`, `gwt`, `gwl`, `gwrm`.
 Merge agent branches into the feature branch from the feature worktree:
 
 ```bash
-git merge feat/search-redesign-ui
-git merge feat/search-redesign-api
-git merge feat/search-redesign-tests
+git -C ./feat/search-redesign merge feat/search-redesign-ui
+git -C ./feat/search-redesign merge feat/search-redesign-api
+git -C ./feat/search-redesign merge feat/search-redesign-tests
 ```
 
 Then merge the feature branch into trunk:
 
 ```bash
-git merge feat/search-redesign
+git -C ./main merge feat/search-redesign
 ```
+
+## Explicit Git Targeting
+
+When an agent is not certain it is truly running inside the intended worktree, use explicit targeting:
+
+```powershell
+git -C <worktree-path> status --short --branch
+git -C <worktree-path> rev-parse --path-format=absolute --git-common-dir
+git --git-dir <project>/.bare --work-tree <worktree-path> push origin <branch>
+```
+
+Treat this as an execution-environment best practice, not as a reason to avoid worktrees.
 
 ## Migration
 
@@ -135,6 +149,7 @@ For Windows/PowerShell, a migration script is included at [scripts/powershell/mi
 3. Use explicit `-From` bases when creating agent branches from a feature branch.
 4. Refuse to delete dirty worktrees unless the user explicitly wants destructive cleanup.
 5. Keep backups when migrating existing repositories.
+6. Prefer `git -C <worktree-path>` over plain `git ...` in agent shells where the current directory may not be what the tool claims.
 
 ## License
 

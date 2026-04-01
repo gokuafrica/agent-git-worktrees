@@ -29,6 +29,17 @@ type gnew gwt gwl gwrm
 
 Prefer the helper commands over hand-written `git worktree` commands because they already encode the bare-repo layout and cleanup behavior.
 
+## Command Execution Nuance
+
+In some Codex shell environments, setting a tool `workdir` is not enough to guarantee that `git` runs from that directory. Treat that as an execution quirk, not a repository problem.
+
+Use these rules:
+
+1. Prefer `git -C <worktree-path> ...` for ordinary Git commands such as `status`, `branch`, `merge`, `push`, and `diff`.
+2. If `git -C` is still awkward or you are operating from outside the repo entirely, use `git --git-dir <project>/.bare --work-tree <project>/<branch> ...`.
+3. Do not assume plain `git status` is safe just because the shell tool was given a `workdir`.
+4. When verifying a managed repo, prefer `git -C <worktree-path> rev-parse --path-format=absolute --git-common-dir`.
+
 ## Use the Repository Layout
 
 Assume this layout for managed projects:
@@ -89,22 +100,22 @@ List worktrees with:
 gwl
 ```
 
-Use `git status --short --branch` inside a specific worktree when the user asks for branch state or dirtiness. Use `git worktree list` directly only when debugging helper behavior.
+Use `git -C <worktree-path> status --short --branch` inside a specific worktree when the user asks for branch state or dirtiness. Use `git worktree list` directly only when debugging helper behavior.
 
 ## Merge Back Safely
 
 Merge agent branches into the feature branch from the feature branch worktree:
 
 ```powershell
-git merge feat/voice-v2-ui
-git merge feat/voice-v2-server
-git merge feat/voice-v2-tests
+git -C <feature-worktree-path> merge feat/voice-v2-ui
+git -C <feature-worktree-path> merge feat/voice-v2-server
+git -C <feature-worktree-path> merge feat/voice-v2-tests
 ```
 
 Then merge the feature branch into trunk from the trunk worktree:
 
 ```powershell
-git merge feat/voice-v2
+git -C <trunk-worktree-path> merge feat/voice-v2
 ```
 
 If the user prefers rebasing or squash merges, follow that preference explicitly. Otherwise use normal merges and report conflicts clearly.
@@ -126,7 +137,7 @@ If already inside the target worktree, `gwrm` moves back to the default branch w
 
 Follow these rules every time:
 
-1. Verify the current repository with `git rev-parse --path-format=absolute --git-common-dir` when unsure whether the repo uses the bare layout.
+1. Verify the current repository with `git -C <worktree-path> rev-parse --path-format=absolute --git-common-dir` when unsure whether the repo uses the bare layout.
 2. Refuse to remove dirty worktrees unless the user explicitly wants destructive cleanup and has confirmed it.
 3. Refuse to share a branch across multiple worktrees.
 4. State clearly which branch is the integration branch and which branches are agent branches.
