@@ -57,6 +57,15 @@ Source the helpers:
 . .\scripts\powershell\git-worktree.ps1
 ```
 
+To make the helpers available in every PowerShell session, add a dot-source line to your PowerShell profile:
+
+```powershell
+$gitWorktreeHelpers = "C:\path\to\agent-git-worktrees\scripts\powershell\git-worktree.ps1"
+if (Test-Path $gitWorktreeHelpers) {
+    . $gitWorktreeHelpers
+}
+```
+
 Create a new managed repo:
 
 ```powershell
