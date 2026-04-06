@@ -24,6 +24,8 @@ Use this sequence:
 
 Prefer the helper scripts in `scripts/powershell/` or `scripts/bash/` over ad hoc `git worktree` commands when the environment matches those shells.
 
+The helpers may be invoked from any managed worktree, the project root, or `.bare`. `gwt <branch>` from the project root or `.bare` uses the repository default branch when no base is provided. `gwrm` without an explicit branch only infers the branch when the current directory is inside a checked-out worktree.
+
 When running ordinary Git commands such as `status`, `diff`, `merge`, `branch`, or `push`, prefer explicit targeting:
 
 - `git -C <worktree-path> ...`

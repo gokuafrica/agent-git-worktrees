@@ -69,6 +69,8 @@ Create a feature branch from trunk:
 gwt feat/search-redesign -From main
 ```
 
+If your shell is at `project/` or `project/.bare/`, `gwt feat/search-redesign` works too and defaults the base to the repository default branch.
+
 Create agent branches from the feature branch:
 
 ```powershell
@@ -87,6 +89,8 @@ Remove a clean merged worktree:
 ```powershell
 gwrm feat/search-redesign-ui
 ```
+
+When running from `project/` or `project/.bare/`, pass the branch name explicitly to `gwrm` because there is no current checked-out worktree to infer it from.
 
 ### Bash / Zsh
 

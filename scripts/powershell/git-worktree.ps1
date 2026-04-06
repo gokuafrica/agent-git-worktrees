@@ -66,19 +66,38 @@ function Get-GitDefaultBranch {
 function Get-BareWorktreeProject {
     param([string]$StartPath = (Get-Location).Path)
 
-    $gitCommonDir = Get-GitString -C $StartPath rev-parse --path-format=absolute --git-common-dir
-    if (-not $gitCommonDir) {
-        throw "Run this command inside a Git worktree."
+    $resolvedStartPath = (Resolve-Path -LiteralPath $StartPath).Path
+    $currentWorktree = Get-GitString -C $resolvedStartPath rev-parse --show-toplevel
+    $currentBranch = $null
+    $bareDir = $null
+
+    if ($currentWorktree) {
+        $gitCommonDir = Get-GitString -C $resolvedStartPath rev-parse --path-format=absolute --git-common-dir
+        if (-not $gitCommonDir) {
+            throw "Run this command inside a managed Git worktree, project root, or .bare directory."
+        }
+
+        $bareDir = $gitCommonDir.Trim()
+        $currentBranch = Get-GitString -C $resolvedStartPath branch --show-current
+    }
+    elseif ((Split-Path -Leaf $resolvedStartPath) -eq '.bare') {
+        $bareDir = $resolvedStartPath
+    }
+    else {
+        $candidateBareDir = Join-Path $resolvedStartPath '.bare'
+        if (Test-Path -LiteralPath $candidateBareDir -PathType Container) {
+            $bareDir = (Resolve-Path -LiteralPath $candidateBareDir).Path
+        }
+        else {
+            throw "Run this command inside a managed Git worktree, project root, or .bare directory."
+        }
     }
 
-    $bareDir = $gitCommonDir.Trim()
     if ((Split-Path -Leaf $bareDir) -ne '.bare') {
         throw "This command expects the bare-repo layout: <project>/.bare plus sibling worktrees."
     }
 
     $projectRoot = Split-Path -Parent $bareDir
-    $currentWorktree = Get-GitString -C $StartPath rev-parse --show-toplevel
-    $currentBranch = Get-GitString -C $StartPath branch --show-current
 
     [pscustomobject]@{
         BareDir         = $bareDir

@@ -51,10 +51,28 @@ git_default_branch() {
 
 bare_project_root() {
   local start_path="${1:-$PWD}"
+  local current_worktree
+  current_worktree="$(git_string -C "$start_path" rev-parse --show-toplevel || true)"
+
+  if [[ -z "$current_worktree" ]]; then
+    if [[ "$(basename "$start_path")" == ".bare" && -d "$start_path" ]]; then
+      dirname "$start_path"
+      return 0
+    fi
+
+    if [[ -d "$start_path/.bare" ]]; then
+      printf '%s\n' "$start_path"
+      return 0
+    fi
+
+    printf 'Run this command inside a managed Git worktree, project root, or .bare directory.\n' >&2
+    return 1
+  fi
+
   local git_common_dir
   git_common_dir="$(git_string -C "$start_path" rev-parse --path-format=absolute --git-common-dir || true)"
   if [[ -z "$git_common_dir" ]]; then
-    printf 'Run this command inside a Git worktree.\n' >&2
+    printf 'Run this command inside a managed Git worktree, project root, or .bare directory.\n' >&2
     return 1
   fi
 
@@ -161,7 +179,11 @@ gwrm() {
   local default_branch
   default_branch="$(git_default_branch "$bare_dir")"
   local current_branch
-  current_branch="$(git_string -C "$PWD" branch --show-current || true)"
+  if [[ -n "$(git_string -C "$PWD" rev-parse --show-toplevel || true)" ]]; then
+    current_branch="$(git_string -C "$PWD" branch --show-current || true)"
+  else
+    current_branch=""
+  fi
   local branch="${1:-$current_branch}"
 
   if [[ -z "$branch" ]]; then

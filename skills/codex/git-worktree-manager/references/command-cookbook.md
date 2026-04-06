@@ -9,6 +9,8 @@ Use these PowerShell helpers in this environment:
 - `gwl`: list worktrees in the current managed project
 - `gwrm [branch]`: remove a clean worktree and delete its branch
 
+`gwt`, `gwl`, and `gwrm <branch>` can be run from inside any managed worktree, from the project root, or from `.bare`. When `gwt <branch>` is run from the project root or `.bare` and `-From` is omitted, the branch is created from the repository default branch. `gwrm` without a branch still needs a current worktree to infer which branch to remove.
+
 ## Command Targeting Rule
 
 In some Codex shell environments, do not rely on tool `workdir` alone for Git commands. Prefer one of these forms:

@@ -55,6 +55,8 @@ project/
 
 Treat `.bare` as the shared Git database. Treat every sibling directory as an equal worktree.
 
+The helpers can be run from any directory inside a managed worktree, from the project root, or from `.bare`. If `gwt <branch>` is run from the project root or `.bare` without `-From`, it creates the new branch from the repository default branch. `gwrm` without an explicit branch still requires a current checked-out worktree so it can infer which branch to remove.
+
 ## Choose the Branch Strategy
 
 Use this decision rule:
@@ -90,7 +92,7 @@ gwt feat/voice-v2-server -From feat/voice-v2
 gwt feat/voice-v2-tests -From feat/voice-v2
 ```
 
-Remember that `gwt <branch>` without `-From` defaults to the repository default branch in this environment.
+Remember that `gwt <branch>` without `-From` defaults to the repository default branch, including when the shell is at the project root or inside `.bare`.
 
 ## Inspect Active Work
 
