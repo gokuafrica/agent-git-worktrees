@@ -112,6 +112,12 @@ Run the Bash helper smoke tests on macOS or Linux with:
 ./tests/bash/git-worktree-helper-tests.sh
 ```
 
+Run the PowerShell helper smoke tests on Windows with:
+
+```powershell
+.\tests\powershell\git-worktree-helper-tests.ps1
+```
+
 For manual verification, use a disposable local repository fixture and verify:
 
 - `gprune` without force exits non-zero and removes nothing.

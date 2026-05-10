@@ -175,6 +175,7 @@ function gnew {
         $mainWorktree = Join-Path $projectRoot $defaultBranch
 
         Invoke-GitChecked "Failed to create the default worktree." -C $bareDir worktree add $mainWorktree $defaultBranch
+        Invoke-GitChecked "Failed to set upstream tracking." -C $mainWorktree branch --set-upstream-to "origin/$defaultBranch" $defaultBranch
         Set-Location $mainWorktree
 
         Write-Host "Ready: $Name/$defaultBranch"
