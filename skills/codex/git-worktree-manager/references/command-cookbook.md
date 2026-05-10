@@ -8,8 +8,9 @@ Use these PowerShell helpers in this environment:
 - `gwt <branch> [-From <base>]`: create a new worktree and branch under the current managed project
 - `gwl`: list worktrees in the current managed project
 - `gwrm [branch]`: remove a clean worktree and delete its branch
+- `gprune [--force]`: destructively reset/prune a managed project to only `.bare` and the default branch worktree
 
-`gwt`, `gwl`, and `gwrm <branch>` can be run from inside any managed worktree, from the project root, or from `.bare`. When `gwt <branch>` is run from the project root or `.bare` and `-From` is omitted, the branch is created from the repository default branch. `gwrm` without a branch still needs a current worktree to infer which branch to remove.
+`gwt`, `gwl`, `gwrm <branch>`, and `gprune` can be run from inside any managed worktree, from the project root, or from `.bare`. When `gwt <branch>` is run from the project root or `.bare` and `-From` is omitted, the branch is created from the repository default branch. `gwrm` without a branch still needs a current worktree to infer which branch to remove.
 
 ## Command Targeting Rule
 
@@ -59,6 +60,22 @@ gwrm feat/search-redesign-ui
 gwrm feat/search-redesign-api
 ```
 
+Reset a managed repo to only the default branch worktree after confirming all other work is disposable:
+
+```powershell
+gprune
+gprune -Force
+```
+
+For Bash or Zsh:
+
+```bash
+gprune
+gprune --force
+```
+
+Without the force flag, `gprune` prints a dry-run summary and exits non-zero. With the force flag, it fetches and prunes remotes, ensures `project/<default-branch>` exists, hard-resets it to `origin/<default-branch>`, cleans untracked files, removes all other registered worktrees including external or temporary worktrees, deletes removed non-default local branches where possible, runs `git worktree prune`, and removes stray project-root entries so only `.bare` and `<default-branch>` remain.
+
 ## Troubleshooting
 
 If the helper commands are missing:
@@ -86,3 +103,15 @@ If needed, target the managed bare repo explicitly:
 ```powershell
 git --git-dir <project>/.bare --work-tree <worktree-path> status --short --branch
 ```
+
+## Manual `gprune` Test Checklist
+
+Use a disposable local repository fixture. Verify:
+
+- `gprune` without force exits non-zero and removes nothing.
+- `gprune --force` works from the project root, `.bare`, the default worktree, and a feature worktree.
+- A missing default worktree is recreated at `project/<default-branch>`.
+- Dirty non-default worktrees are removed after force confirmation.
+- External registered worktrees are removed.
+- Stray top-level project files and folders are removed.
+- Final output shows remaining registered worktrees, default branch status, local and `origin/<default-branch>` SHAs, and top-level project-root contents.

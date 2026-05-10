@@ -1,6 +1,6 @@
 ---
 name: git-worktree-manager
-description: Manage Git worktree and Git work tree workflows for parallel agent work, especially bare-repo setups with a `.bare` directory plus sibling worktrees. Use when Codex needs to discuss git worktrees or git work trees, set up or maintain this repository layout, create feature or agent branches with `gnew` or `gwt`, inspect active worktrees with `gwl`, merge agent branches back into a feature or trunk branch, or safely remove finished worktrees with `gwrm`.
+description: Manage Git worktree and Git work tree workflows for parallel agent work, especially bare-repo setups with a `.bare` directory plus sibling worktrees. Use when Codex needs to discuss git worktrees or git work trees, set up or maintain this repository layout, create feature or agent branches with `gnew` or `gwt`, inspect active worktrees with `gwl`, merge agent branches back into a feature or trunk branch, safely remove finished worktrees with `gwrm`, or destructively reset/prune a managed worktree layout back to only the default branch worktree with `gprune`.
 ---
 
 # Git Worktree Manager
@@ -17,14 +17,14 @@ Confirm that worktree helper commands are available before using them:
 
 ```powershell
 . .\scripts\powershell\git-worktree.ps1
-Get-Command gnew,gwt,gwl,gwrm
+Get-Command gnew,gwt,gwl,gwrm,gprune
 ```
 
 For Bash or Zsh:
 
 ```bash
 source ./scripts/bash/git-worktree.sh
-type gnew gwt gwl gwrm
+type gnew gwt gwl gwrm gprune
 ```
 
 Prefer the helper commands over hand-written `git worktree` commands because they already encode the bare-repo layout and cleanup behavior.
@@ -135,6 +135,30 @@ gwrm feat/voice-v2-server
 
 If already inside the target worktree, `gwrm` moves back to the default branch worktree before removing it.
 
+## Destructive Prune
+
+Use `gprune` only when the user clearly asks to discard all non-default worktrees and reset the managed repo to the default branch only. Natural requests include "prune this repo to only the default branch worktree", "reset this worktree layout back to main only", and "clean all agent worktrees and keep only trunk".
+
+Preview what would be removed or reset:
+
+```powershell
+gprune
+```
+
+Run the destructive cleanup after explicit confirmation:
+
+```powershell
+gprune -Force
+```
+
+For Bash or Zsh:
+
+```bash
+gprune --force
+```
+
+`gprune` fetches and prunes remotes, ensures `project/<default-branch>` exists, hard-resets it to `origin/<default-branch>`, removes untracked files, removes every other registered worktree including external or temporary worktrees, deletes removed non-default local branches where possible, runs `git worktree prune`, and removes stray top-level project-root entries. It must never remove `.bare` or the canonical default branch worktree.
+
 ## Safety Rules
 
 Follow these rules every time:
@@ -144,3 +168,4 @@ Follow these rules every time:
 3. Refuse to share a branch across multiple worktrees.
 4. State clearly which branch is the integration branch and which branches are agent branches.
 5. Prefer explicit `-From` arguments when creating agent branches from a feature branch so lineage stays obvious.
+6. Use `gprune --force` or `gprune -Force` only for whole-repo destructive cleanup, not routine merged-branch cleanup.

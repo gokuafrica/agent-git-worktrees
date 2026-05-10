@@ -101,6 +101,15 @@ gwrm feat/search-redesign-ui
 
 When running from `project/` or `project/.bare/`, pass the branch name explicitly to `gwrm` because there is no current checked-out worktree to infer it from.
 
+Reset a managed repo to only the default branch worktree after confirming all other work is disposable:
+
+```powershell
+gprune
+gprune -Force
+```
+
+Without `-Force`, `gprune` prints a dry-run summary and exits non-zero. With `-Force`, it removes all non-default registered worktrees, deletes removed non-default local branches where possible, resets the default branch worktree to `origin/<default-branch>`, cleans untracked files, prunes worktree metadata, and removes stray top-level project entries so only `.bare` and `<default-branch>` remain.
+
 ### Bash / Zsh
 
 Source the helpers:
@@ -109,7 +118,7 @@ Source the helpers:
 source ./scripts/bash/git-worktree.sh
 ```
 
-The command surface is the same: `gnew`, `gwt`, `gwl`, `gwrm`.
+The command surface is the same: `gnew`, `gwt`, `gwl`, `gwrm`, `gprune`. In Bash or Zsh, run the destructive reset as `gprune --force`.
 
 ## Merge Flow
 
@@ -163,6 +172,18 @@ For Windows/PowerShell, a migration script is included at [scripts/powershell/mi
 4. Refuse to delete dirty worktrees unless the user explicitly wants destructive cleanup.
 5. Keep backups when migrating existing repositories.
 6. Prefer `git -C <worktree-path>` over plain `git ...` in agent shells where the current directory may not be what the tool claims.
+7. Use `gprune --force` or `gprune -Force` only when the user clearly asks to discard all non-default worktrees and reset the project to the default branch only.
+
+## Manual `gprune` Test Checklist
+
+This repository does not currently include a helper-script test harness. Use a disposable local fixture and verify:
+
+- dry-run exits non-zero and removes nothing
+- forced cleanup works from the project root, `.bare`, the default worktree, and a feature worktree
+- a missing default worktree is recreated at `project/<default-branch>`
+- dirty non-default worktrees and external registered worktrees are removed
+- stray top-level project files and folders are removed
+- final output shows remaining registered worktrees, default branch status, default HEAD SHA, `origin/<default-branch>` SHA, and top-level project-root contents
 
 ## License
 

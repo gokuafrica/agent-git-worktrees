@@ -40,8 +40,49 @@ The normal cleanup sequence is:
 
 The helper command `gwrm` does that for managed repos when the worktree is clean.
 
+## Destructive Prune To Default Only
+
+Use `gprune` only when all non-default worktrees and local branches are disposable and the desired final layout is:
+
+```text
+project/
+  .bare/
+  main/       or master/
+```
+
+Preview the destructive cleanup:
+
+```bash
+gprune
+```
+
+Run it after explicit confirmation:
+
+```bash
+gprune --force
+```
+
+In PowerShell, use:
+
+```powershell
+gprune -Force
+```
+
+With force, `gprune` fetches and prunes remotes, ensures the default branch worktree exists at `project/<default-branch>`, hard-resets it to `origin/<default-branch>`, removes untracked files and directories, removes every other registered worktree including external or temporary worktrees, deletes removed non-default local branches where possible, runs `git worktree prune`, and removes stray top-level project-root entries. It must never remove `.bare` or the canonical default branch worktree.
+
+Manual test checklist for changes to `gprune`:
+
+- dry-run exits non-zero and removes nothing
+- forced cleanup works from project root, `.bare`, default worktree, and feature worktree
+- missing default worktree is recreated
+- dirty non-default worktrees are removed with force
+- external registered worktrees are removed
+- stray top-level project-root files and folders are removed
+- final output includes remaining worktrees, default status, default/local remote SHAs, and root contents
+
 ## What Not to Do
 
 - Do not delete dirty worktrees casually.
 - Do not force-delete branches that still contain unique work.
 - Do not remove the default branch worktree as part of normal cleanup.
+- Do not run `gprune --force` unless the user has explicitly confirmed that all non-default work is disposable.
