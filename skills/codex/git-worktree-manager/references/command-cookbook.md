@@ -106,7 +106,13 @@ git --git-dir <project>/.bare --work-tree <worktree-path> status --short --branc
 
 ## Manual `gprune` Test Checklist
 
-Use a disposable local repository fixture. Verify:
+Run the Bash helper smoke tests on macOS or Linux with:
+
+```bash
+./tests/bash/git-worktree-helper-tests.sh
+```
+
+For manual verification, use a disposable local repository fixture and verify:
 
 - `gprune` without force exits non-zero and removes nothing.
 - `gprune --force` works from the project root, `.bare`, the default worktree, and a feature worktree.

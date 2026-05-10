@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
-
 git_checked() {
   local error_message="$1"
   shift
@@ -125,31 +123,40 @@ gnew() {
   fi
 
   mkdir -p "$project_root"
-  git_checked "Failed to create bare clone." clone --bare "$url" "$bare_dir"
-  git_checked "Failed to configure origin fetch refspec." -C "$bare_dir" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
-  git_checked "Failed to enable fetch pruning." -C "$bare_dir" config fetch.prune true
-  git_checked "Failed to fetch origin." -C "$bare_dir" fetch origin --prune
+  git_checked "Failed to create bare clone." clone --bare "$url" "$bare_dir" || return 1
+  git_checked "Failed to configure origin fetch refspec." -C "$bare_dir" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*' || return 1
+  git_checked "Failed to enable fetch pruning." -C "$bare_dir" config fetch.prune true || return 1
+  git_checked "Failed to fetch origin." -C "$bare_dir" fetch origin --prune || return 1
   git -C "$bare_dir" remote set-head origin --auto >/dev/null 2>&1 || true
 
   local default_branch
   default_branch="$(git_default_branch "$bare_dir")"
   local main_worktree="$project_root/$default_branch"
 
-  git_checked "Failed to create the default worktree." -C "$bare_dir" worktree add "$main_worktree" "$default_branch"
-  git_checked "Failed to set upstream tracking." -C "$main_worktree" branch --set-upstream-to "origin/$default_branch" "$default_branch"
+  git_checked "Failed to create the default worktree." -C "$bare_dir" worktree add "$main_worktree" "$default_branch" || return 1
+  git_checked "Failed to set upstream tracking." -C "$main_worktree" branch --set-upstream-to "origin/$default_branch" "$default_branch" || return 1
 
   cd "$main_worktree"
   printf 'Ready: %s/%s\n' "$name" "$default_branch"
 }
 
 gwt() {
-  if [[ $# -lt 1 || $# -gt 2 ]]; then
-    printf 'Usage: gwt <branch> [from]\n' >&2
+  if [[ $# -lt 1 || $# -gt 3 ]]; then
+    printf 'Usage: gwt <branch> [from|-From <from>|--from <from>]\n' >&2
     return 1
   fi
 
   local branch="$1"
-  local from="${2:-}"
+  shift
+  local from=""
+  if [[ $# -eq 1 ]]; then
+    from="$1"
+  elif [[ $# -eq 2 && ( "$1" == "-From" || "$1" == "--from" ) ]]; then
+    from="$2"
+  elif [[ $# -gt 0 ]]; then
+    printf 'Usage: gwt <branch> [from|-From <from>|--from <from>]\n' >&2
+    return 1
+  fi
   local project_root
   project_root="$(bare_project_root)"
   local bare_dir="$project_root/.bare"
@@ -171,7 +178,7 @@ gwt() {
     return 1
   fi
 
-  git_checked "Failed to fetch origin." -C "$bare_dir" fetch origin --prune
+  git_checked "Failed to fetch origin." -C "$bare_dir" fetch origin --prune || return 1
 
   local start_point=
   if git_ref_exists "$bare_dir" "refs/heads/$from"; then
@@ -184,7 +191,7 @@ gwt() {
   fi
 
   mkdir -p "$(dirname "$worktree_path")"
-  git_checked "Failed to create worktree '$branch'." -C "$bare_dir" worktree add -b "$branch" "$worktree_path" "$start_point"
+  git_checked "Failed to create worktree '$branch'." -C "$bare_dir" worktree add -b "$branch" "$worktree_path" "$start_point" || return 1
 
   cd "$worktree_path"
   printf 'Ready: %s/%s (from %s)\n' "$(basename "$project_root")" "$branch" "$from"
@@ -193,7 +200,7 @@ gwt() {
 gwl() {
   local project_root
   project_root="$(bare_project_root)"
-  git_checked "Failed to list worktrees." -C "$project_root/.bare" worktree list
+  git_checked "Failed to list worktrees." -C "$project_root/.bare" worktree list || return 1
 }
 
 gwrm() {
@@ -235,8 +242,8 @@ gwrm() {
     cd "$project_root/$default_branch"
   fi
 
-  git_checked "Failed to remove worktree '$branch'." -C "$bare_dir" worktree remove "$worktree_path"
-  git_checked "Failed to delete branch '$branch'." -C "$bare_dir" branch --delete "$branch"
+  git_checked "Failed to remove worktree '$branch'." -C "$bare_dir" worktree remove "$worktree_path" || return 1
+  git_checked "Failed to delete branch '$branch'." -C "$bare_dir" branch --delete "$branch" || return 1
   printf 'Removed: %s/%s\n' "$(basename "$project_root")" "$branch"
 }
 
@@ -266,6 +273,27 @@ gprune_collect_worktrees() {
       }
     }
   '
+}
+
+gprune_canonical_path() {
+  local target="$1"
+  local parent
+  local leaf
+
+  if [[ -d "$target" ]]; then
+    (cd "$target" 2>/dev/null && pwd -P) && return 0
+  fi
+
+  parent="$(dirname "$target")"
+  leaf="$(basename "$target")"
+  if [[ -d "$parent" ]]; then
+    local canonical_parent
+    canonical_parent="$(cd "$parent" 2>/dev/null && pwd -P)" || return 1
+    printf '%s/%s\n' "$canonical_parent" "$leaf"
+    return 0
+  fi
+
+  printf '%s\n' "$target"
 }
 
 gprune_report() {
@@ -325,7 +353,7 @@ gprune() {
   project_root="$(bare_project_root)"
   local bare_dir="$project_root/.bare"
 
-  git_checked "Failed to fetch remotes." -C "$bare_dir" fetch --all --prune
+  git_checked "Failed to fetch remotes." -C "$bare_dir" fetch --all --prune || return 1
   git -C "$bare_dir" remote set-head origin --auto >/dev/null 2>&1 || true
 
   local default_branch
@@ -336,6 +364,8 @@ gprune() {
   fi
 
   local default_worktree="$project_root/$default_branch"
+  local default_worktree_compare
+  default_worktree_compare="$(gprune_canonical_path "$default_worktree")"
 
   if [[ "$force" -ne 1 ]]; then
     printf 'DRY RUN: gprune would destructively reset this managed repo to only the default branch worktree.\n\n'
@@ -358,21 +388,22 @@ gprune() {
   while IFS= read -r entry; do
     entries+=("$entry")
   done < <(gprune_collect_worktrees "$bare_dir")
-  local entry path branch is_bare rest
+  local entry worktree_path_entry branch is_bare rest worktree_path_compare
   local branches_to_delete=()
   for entry in "${entries[@]}"; do
-    path="${entry%%$'\t'*}"
+    worktree_path_entry="${entry%%$'\t'*}"
     rest="${entry#*$'\t'}"
     branch="${rest%%$'\t'*}"
     is_bare="${entry##*$'\t'}"
     if [[ "$is_bare" == "1" ]]; then
       continue
     fi
-    if [[ "$path" == "$default_worktree" ]]; then
+    worktree_path_compare="$(gprune_canonical_path "$worktree_path_entry")"
+    if [[ "$worktree_path_compare" == "$default_worktree_compare" ]]; then
       continue
     fi
 
-    git_checked "Failed to remove worktree '$path'." -C "$bare_dir" worktree remove --force "$path"
+    git_checked "Failed to remove worktree '$worktree_path_entry'." -C "$bare_dir" worktree remove --force "$worktree_path_entry" || return 1
     if [[ -n "$branch" && "$branch" != "$default_branch" ]]; then
       branches_to_delete+=("$branch")
     fi
@@ -380,22 +411,26 @@ gprune() {
 
   if [[ ! -d "$default_worktree" || -z "$(git -C "$default_worktree" rev-parse --show-toplevel 2>/dev/null || true)" ]]; then
     rm -rf -- "$default_worktree"
-    git_checked "Failed to create the default worktree." -C "$bare_dir" worktree add -B "$default_branch" "$default_worktree" "origin/$default_branch"
+    git -C "$bare_dir" worktree remove --force "$default_worktree" >/dev/null 2>&1 || true
+    git_checked "Failed to prune stale default worktree metadata." -C "$bare_dir" worktree prune || return 1
+    git_checked "Failed to create the default worktree." -C "$bare_dir" worktree add -B "$default_branch" "$default_worktree" "origin/$default_branch" || return 1
   fi
 
-  git_checked "Failed to check out default branch." -C "$default_worktree" checkout -B "$default_branch" "origin/$default_branch"
-  git_checked "Failed to reset default worktree." -C "$default_worktree" reset --hard "origin/$default_branch"
-  git_checked "Failed to clean default worktree." -C "$default_worktree" clean -fdx
+  git_checked "Failed to check out default branch." -C "$default_worktree" checkout -B "$default_branch" "origin/$default_branch" || return 1
+  git_checked "Failed to reset default worktree." -C "$default_worktree" reset --hard "origin/$default_branch" || return 1
+  git_checked "Failed to clean default worktree." -C "$default_worktree" clean -fdx || return 1
   git -C "$default_worktree" branch --set-upstream-to "origin/$default_branch" "$default_branch" >/dev/null 2>&1 || true
 
   local branch_to_delete
-  for branch_to_delete in "${branches_to_delete[@]}"; do
-    if git_ref_exists "$bare_dir" "refs/heads/$branch_to_delete"; then
-      git -C "$bare_dir" branch -D "$branch_to_delete" || printf 'Warning: failed to delete local branch: %s\n' "$branch_to_delete" >&2
-    fi
-  done
+  if ((${#branches_to_delete[@]})); then
+    for branch_to_delete in "${branches_to_delete[@]}"; do
+      if git_ref_exists "$bare_dir" "refs/heads/$branch_to_delete"; then
+        git -C "$bare_dir" branch -D "$branch_to_delete" || printf 'Warning: failed to delete local branch: %s\n' "$branch_to_delete" >&2
+      fi
+    done
+  fi
 
-  git_checked "Failed to prune worktree metadata." -C "$bare_dir" worktree prune
+  git_checked "Failed to prune worktree metadata." -C "$bare_dir" worktree prune || return 1
 
   local item
   while IFS= read -r -d '' item; do

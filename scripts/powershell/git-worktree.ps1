@@ -434,6 +434,8 @@ function gprune {
             Remove-Item -LiteralPath $defaultWorktree -Recurse -Force
         }
 
+        & git -C $project.BareDir worktree remove --force $defaultWorktree 2>$null | Out-Null
+        Invoke-GitChecked "Failed to prune stale default worktree metadata." -C $project.BareDir worktree prune
         Invoke-GitChecked "Failed to create the default worktree." -C $project.BareDir worktree add -B $project.DefaultBranch $defaultWorktree "origin/$($project.DefaultBranch)"
     }
 

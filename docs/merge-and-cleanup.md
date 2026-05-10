@@ -70,6 +70,12 @@ gprune -Force
 
 With force, `gprune` fetches and prunes remotes, ensures the default branch worktree exists at `project/<default-branch>`, hard-resets it to `origin/<default-branch>`, removes untracked files and directories, removes every other registered worktree including external or temporary worktrees, deletes removed non-default local branches where possible, runs `git worktree prune`, and removes stray top-level project-root entries. It must never remove `.bare` or the canonical default branch worktree.
 
+Run the Bash helper smoke tests on macOS or Linux with:
+
+```bash
+./tests/bash/git-worktree-helper-tests.sh
+```
+
 Manual test checklist for changes to `gprune`:
 
 - dry-run exits non-zero and removes nothing

@@ -118,7 +118,7 @@ Source the helpers:
 source ./scripts/bash/git-worktree.sh
 ```
 
-The command surface is the same: `gnew`, `gwt`, `gwl`, `gwrm`, `gprune`. In Bash or Zsh, run the destructive reset as `gprune --force`.
+The command surface is the same: `gnew`, `gwt`, `gwl`, `gwrm`, `gprune`. Bash also accepts the documented `gwt <branch> -From <base>` form. In Bash or Zsh, run the destructive reset as `gprune --force`.
 
 ## Merge Flow
 
@@ -176,7 +176,13 @@ For Windows/PowerShell, a migration script is included at [scripts/powershell/mi
 
 ## Manual `gprune` Test Checklist
 
-This repository does not currently include a helper-script test harness. Use a disposable local fixture and verify:
+Run the Bash helper smoke tests on macOS or Linux with:
+
+```bash
+./tests/bash/git-worktree-helper-tests.sh
+```
+
+For manual verification, use a disposable local fixture and verify:
 
 - dry-run exits non-zero and removes nothing
 - forced cleanup works from the project root, `.bare`, the default worktree, and a feature worktree
