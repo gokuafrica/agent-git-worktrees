@@ -82,9 +82,12 @@ run_case "gprune force from feature worktree removes dirty worktree and stray ro
   printf dirty > "$root/managed/feat/test/dirty.txt"
   printf stray > "$root/managed/stray.txt"
   mkdir "$root/managed/stray-dir"
+  mkdir -p "$root/managed/main/node_modules/pkg/subpkg"
+  printf dependency > "$root/managed/main/node_modules/pkg/subpkg/index.js"
   gprune --force
   assert_only_default_layout "$root/managed" main
   assert_not_exists "$root/managed/feat"
+  assert_not_exists "$root/managed/main/node_modules"
   if git -C "$root/managed/.bare" show-ref --verify --quiet refs/heads/feat/test; then
     fail "Expected feat/test branch to be deleted"
   fi

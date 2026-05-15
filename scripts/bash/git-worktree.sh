@@ -333,6 +333,32 @@ gprune_verify() {
   find "$project_root" -mindepth 1 -maxdepth 1 -print | sort
 }
 
+gprune_remove_reported_clean_paths() {
+  local default_worktree="$1"
+  local relative_path
+
+  while IFS= read -r -d '' relative_path; do
+    [[ -n "$relative_path" ]] || continue
+    rm -rf -- "$default_worktree/$relative_path"
+  done < <(git -C "$default_worktree" ls-files --others --ignored --exclude-standard --directory -z)
+}
+
+gprune_clean_default_worktree() {
+  local default_worktree="$1"
+
+  if git -C "$default_worktree" clean -ffdx; then
+    return 0
+  fi
+
+  printf 'Warning: initial git clean failed; retrying after direct removal of reported untracked/ignored paths.\n' >&2
+  if git -C "$default_worktree" clean -ffdx; then
+    return 0
+  fi
+
+  gprune_remove_reported_clean_paths "$default_worktree"
+  git_checked "Failed to clean default worktree." -C "$default_worktree" clean -ffdx || return 1
+}
+
 gprune() {
   local force=0
   if [[ $# -gt 1 ]]; then
@@ -418,7 +444,7 @@ gprune() {
 
   git_checked "Failed to check out default branch." -C "$default_worktree" checkout -B "$default_branch" "origin/$default_branch" || return 1
   git_checked "Failed to reset default worktree." -C "$default_worktree" reset --hard "origin/$default_branch" || return 1
-  git_checked "Failed to clean default worktree." -C "$default_worktree" clean -fdx || return 1
+  gprune_clean_default_worktree "$default_worktree" || return 1
   git -C "$default_worktree" branch --set-upstream-to "origin/$default_branch" "$default_branch" >/dev/null 2>&1 || true
 
   local branch_to_delete

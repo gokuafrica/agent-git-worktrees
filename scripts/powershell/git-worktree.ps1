@@ -370,6 +370,50 @@ function Show-GpruneVerification {
     }
 }
 
+function Invoke-GpruneGitClean {
+    param([Parameter(Mandatory)][string]$DefaultWorktree)
+
+    & git -C $DefaultWorktree clean -ffdx
+    return $LASTEXITCODE -eq 0
+}
+
+function Remove-GpruneReportedCleanPaths {
+    param([Parameter(Mandatory)][string]$DefaultWorktree)
+
+    $lines = @(& git -C $DefaultWorktree clean -ffdx -n 2>$null)
+    foreach ($line in $lines) {
+        if (-not $line.StartsWith('Would remove ')) {
+            continue
+        }
+
+        $relativePath = $line.Substring('Would remove '.Length).TrimEnd('/')
+        if ([string]::IsNullOrWhiteSpace($relativePath)) {
+            continue
+        }
+
+        $targetPath = Join-Path $DefaultWorktree $relativePath
+        if (Test-Path -LiteralPath $targetPath) {
+            Remove-Item -LiteralPath $targetPath -Recurse -Force
+        }
+    }
+}
+
+function Invoke-GpruneCleanDefaultWorktree {
+    param([Parameter(Mandatory)][string]$DefaultWorktree)
+
+    if (Invoke-GpruneGitClean -DefaultWorktree $DefaultWorktree) {
+        return
+    }
+
+    Write-Warning 'Initial git clean failed; retrying after direct removal of reported untracked/ignored paths.'
+    if (Invoke-GpruneGitClean -DefaultWorktree $DefaultWorktree) {
+        return
+    }
+
+    Remove-GpruneReportedCleanPaths -DefaultWorktree $DefaultWorktree
+    Invoke-GitChecked "Failed to clean default worktree." -C $DefaultWorktree clean -ffdx
+}
+
 function gprune {
     param(
         [switch]$Force
@@ -442,7 +486,7 @@ function gprune {
 
     Invoke-GitChecked "Failed to check out default branch." -C $defaultWorktree checkout -B $project.DefaultBranch "origin/$($project.DefaultBranch)"
     Invoke-GitChecked "Failed to reset default worktree." -C $defaultWorktree reset --hard "origin/$($project.DefaultBranch)"
-    Invoke-GitChecked "Failed to clean default worktree." -C $defaultWorktree clean -fdx
+    Invoke-GpruneCleanDefaultWorktree -DefaultWorktree $defaultWorktree
     & git -C $defaultWorktree branch --set-upstream-to "origin/$($project.DefaultBranch)" $project.DefaultBranch 2>$null | Out-Null
 
     foreach ($branch in ($branchesToDelete | Select-Object -Unique)) {

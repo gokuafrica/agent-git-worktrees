@@ -157,9 +157,13 @@ Invoke-TestCase 'gprune -Force from project root' {
     gwt feat/root -From main
     Set-Content -LiteralPath (Join-Path $managed 'feat\root\dirty.txt') -Value 'dirty'
     Set-Content -LiteralPath (Join-Path $managed 'stray.txt') -Value 'stray'
+    $nodeModulesPath = Join-Path $managed 'main\node_modules\pkg\subpkg'
+    New-Item -ItemType Directory -Path $nodeModulesPath -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $nodeModulesPath 'index.js') -Value 'dependency'
     Set-Location $managed
     gprune -Force
     Assert-OnlyDefaultLayout -ProjectRoot $managed -DefaultBranch main
+    Assert-PathMissing (Join-Path $managed 'main\node_modules')
 }
 
 Invoke-TestCase 'gprune -Force from .bare' {
